@@ -5,6 +5,8 @@
 //  algorithms. The user can specify the length of the array and the number of
 //  iterations to be performed. The program will print the mean time and the
 //  standard deviation of the execution time of each algorithm.
+//  Usage:
+//  ./challenge1 [--verbose] [--array_length N] [--n_iterations N]
 
 #include <math.h>
 #include <stdbool.h>
