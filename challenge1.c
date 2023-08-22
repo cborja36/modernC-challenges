@@ -1,10 +1,5 @@
 // Creator: Borja Castillo
 // Date: 18/08/2023
-// Description:
-//  This program compares the performance of QuickSort and MergeSort
-//  algorithms. The user can specify the length of the array and the number of
-//  iterations to be performed. The program will print the mean time and the
-//  standard deviation of the execution time of each algorithm.
 //  Usage:
 //  ./challenge1 [--verbose] [--array_length N] [--n_iterations N]
 
@@ -15,6 +10,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+/**********************/
+/***** Slow Sort *****/
+/**********************/
+
+void SlowSort(double arr[], size_t l, size_t r) {
+  size_t n = l + r;
+  double working_arr[n];
+  for (size_t i = 0; i < n; ++i) {
+    size_t n_minor = 0;
+    for (size_t j = 0; j < n; ++j) {
+      if (arr[i] > arr[j]) {
+        ++n_minor;
+      }
+    }
+    working_arr[n_minor] = arr[i];
+  }
+  for (size_t i = 0; i < n; ++i) {
+    arr[i] = working_arr[i];
+  }
+}
 
 /**********************/
 /***** Quick Sort *****/
@@ -97,90 +113,107 @@ void print_array(double arr[], size_t n) {
   printf("\n");
 }
 
-/****************/
-/***** Main *****/
-/****************/
+typedef void (*SortFunc)(double[], size_t, size_t);
 
-int main(int argc, char *argv[]) {
-  // Default values
-  bool verbose = false;
-  size_t N = 1000;
-  int iterations = 100;
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--verbose") == 0) {
-      verbose = true;
-    } else if (strcmp(argv[i], "--array_length") == 0 && i + 1 < argc) {
-      N = atoi(argv[++i]);
-
-    } else if (strcmp(argv[i], "--n_iterations") == 0 && i + 1 < argc) {
-      iterations = atoi(argv[++i]);
-    }
-  }
-
-  double arr1[N];
-  double arr2[N];
-  double total_time_qs = 0, total_time_ms = 0;
-  double times_qs[iterations], times_ms[iterations];
+void measureSort(SortFunc sort, const char *name, size_t N, int iterations,
+                 bool verbose, double *mean, double *std_dev) {
+  double arr[N];
+  double total_time = 0;
+  double times[iterations];
 
   for (int i = 0; i < iterations; ++i) {
     for (size_t j = 0; j < N; ++j) {
-      double val = rand();
-      arr1[j] = val;
-      arr2[j] = val;
+      arr[j] = rand();
     }
 
     if (verbose) {
       printf("\n--- Iteration %d ---\n", i + 1);
       printf("\nInitial array: ");
-      print_array(arr1, N);
+      print_array(arr, N);
     }
 
     clock_t start, end;
 
     start = clock();
-    QuickSort(arr1, 0, N);
+    sort(arr, 0, N);
     end = clock();
-    times_qs[i] =
-        (double)(end - start) / CLOCKS_PER_SEC;  // Store individual time
-    total_time_qs += times_qs[i];
 
-    start = clock();
-    MergeSort(arr2, 0, N);
-    end = clock();
-    times_ms[i] =
-        (double)(end - start) / CLOCKS_PER_SEC;  // Store individual time
-    total_time_ms += times_ms[i];
+    times[i] = (double)(end - start) / CLOCKS_PER_SEC;
+    total_time += times[i];
 
-    if (!is_sorted(arr1, N) || !is_sorted(arr2, N)) {
-      printf("Error: array is not sorted\n");
-      return EXIT_FAILURE;
-    } else if (verbose) {
-      printf("\nQuickSort: ");
-      print_array(arr1, N);
-      printf("\nMergeSort: ");
-      print_array(arr2, N);
+    if (!is_sorted(arr, N)) {
+      printf("Error: array is not sorted with %s\n", name);
+      exit(EXIT_FAILURE);
     }
   }
 
-  double mean_qs = total_time_qs / iterations;
-  double mean_ms = total_time_ms / iterations;
+  *mean = total_time / iterations;
 
-  double variance_qs = 0, variance_ms = 0;
+  double variance = 0;
   for (int i = 0; i < iterations; ++i) {
-    variance_qs += (times_qs[i] - mean_qs) * (times_qs[i] - mean_qs);
-    variance_ms += (times_ms[i] - mean_ms) * (times_ms[i] - mean_ms);
+    variance += (times[i] - *mean) * (times[i] - *mean);
   }
-  double std_dev_qs = sqrt(variance_qs / iterations);
-  double std_dev_ms = sqrt(variance_ms / iterations);
+  *std_dev = sqrt(variance / iterations);
+}
 
-  puts("\n--- QuickSort ---");
-  printf("Mean Time: %.2e seconds\nStandard Deviation: %.2e\n", mean_qs,
-         std_dev_qs);
+/****************/
+/***** Main *****/
+/****************/
 
-  puts("\n--- MergeSort ---");
-  printf("Mean Time: %.2e seconds\nStandard Deviation: %.2e\n", mean_ms,
-         std_dev_ms);
+typedef struct SortAlgorithm SortAlgorithm;
+struct SortAlgorithm {
+  SortFunc func;
+  const char *name;
+  double mean;
+  double std_dev;
+};
+
+int main(int argc, char *argv[]) {
+  /* Default values */
+  bool verbose = false;
+  size_t N = 1000;
+  int iterations = 100;
+
+  /* Parse command line arguments */
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--help") == 0) {
+      puts(
+          "Usage: ./program [--verbose] [--array_length <length>] "
+          "[--n_iterations <iterations>]");
+      puts("Options:");
+      puts("  --verbose       : Display verbose output for each iteration.");
+      puts(
+          "  --array_length  : Set the length of the array for sorting. "
+          "Default is 1000.");
+      puts(
+          "  --n_iterations  : Set the number of iterations to run. Default "
+          "is 100.");
+      return EXIT_SUCCESS;  // If --help is provided, display the help and exit
+                            // the program.
+    } else if (strcmp(argv[i], "--verbose") == 0) {
+      verbose = true;
+    } else if (strcmp(argv[i], "--array_length") == 0 && i + 1 < argc) {
+      N = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--n_iterations") == 0 && i + 1 < argc) {
+      iterations = atoi(argv[++i]);
+    }
+  }
+
+  SortAlgorithm algorithms[] = {
+      {QuickSort, "QuickSort"},
+      {MergeSort, "MergeSort"},
+      {SlowSort, "SlowSort"},
+  };
+
+  size_t algo_count = sizeof(algorithms) / sizeof(algorithms[0]);
+
+  for (size_t i = 0; i < algo_count; ++i) {
+    measureSort(algorithms[i].func, algorithms[i].name, N, iterations, verbose,
+                &algorithms[i].mean, &algorithms[i].std_dev);
+    printf("\n--- %s ---\n", algorithms[i].name);
+    printf("Mean Time: %.2e seconds\nStandard Deviation: %.2e\n",
+           algorithms[i].mean, algorithms[i].std_dev);
+  }
 
   return EXIT_SUCCESS;
 }
