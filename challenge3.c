@@ -25,17 +25,50 @@
 #include <assert.h>
 #include <limits.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>  // For sleep function on Unix-like systems
 
-double f(size_t n) {
+void prettyu(size_t n) {
+  if (n < 1000) {
+    printf("%zu", n);
+    return;
+  }
+  prettyu(n / 1000);
+  printf(",%03zu", n % 1000);
+}
+
+void print_progress(size_t iteration, double estimation, bool return_to_top) {
+  printf("\r>> Iteration (");
+  prettyu(iteration);
+  printf(") <<\n");
+  printf("Real value: %.16f\n", M_PI);
+  printf("Estimation: %.16f\n", 4 * estimation);
+  printf("Error:      %.12e", fabs(4 * estimation - M_PI));
+  if (return_to_top) {
+    printf("\033[3A");
+  }
+}
+
+double f(size_t n, bool verbose) {
   double result = 0;
   double current_term;
+  bool first = true;
   for (size_t i = 0; i <= n; ++i) {
     current_term = 1. / (2 * i + 1);
     if (i % 2 == 1) current_term *= -1;
     result += current_term;
+
+    if (verbose && i % 10000000 == 0) {
+      if (!first) {
+        print_progress(i, result, true);
+      } else {
+        print_progress(i, result, false);
+        first = false;
+      }
+    }
   }
   return result;
 }
@@ -45,14 +78,4 @@ size_t calculate_precision(size_t n_decimals) {
   return ceil(threshold);
 }
 
-int main(int argc, char *argv[argc + 1]) {
-  size_t n_decimals = strtol(argv[1], NULL, 10);
-  for (size_t i = 1; i <= n_decimals; ++i) {
-    size_t precision = calculate_precision(i);
-    double estimation = f(precision);
-    printf("-- Precision (%zu) --\n", i);
-    printf("Estimation: %.16f\n", 4 * estimation);
-    printf("Real value: %.16f\n", M_PI);
-    printf("Error:      %.16f\n\n", fabs(4 * estimation - M_PI));
-  }
-}
+int main() { f(SIZE_T_MAX, true); }
