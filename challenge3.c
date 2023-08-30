@@ -40,16 +40,14 @@ void prettyu(size_t n) {
   printf(",%03zu", n % 1000);
 }
 
-void print_progress(size_t iteration, double estimation, bool return_to_top) {
+void print_progress(size_t iteration, double estimation) {
   printf("\r>> Iteration (");
   prettyu(iteration);
   printf(") <<\n");
   printf("Real value: %.16f\n", M_PI);
   printf("Estimation: %.16f\n", 4 * estimation);
   printf("Error:      %.12e", fabs(4 * estimation - M_PI));
-  if (return_to_top) {
-    printf("\033[3A");
-  }
+  printf("\033[3A");
 }
 
 double f(size_t n, bool verbose) {
@@ -57,17 +55,12 @@ double f(size_t n, bool verbose) {
   double current_term;
   bool first = true;
   for (size_t i = 0; i <= n; ++i) {
-    current_term = 1. / (2 * i + 1);
+current_term = 1. / (2 * i + 1);
     if (i % 2 == 1) current_term *= -1;
     result += current_term;
 
     if (verbose && i % 10000000 == 0) {
-      if (!first) {
-        print_progress(i, result, true);
-      } else {
-        print_progress(i, result, false);
-        first = false;
-      }
+      print_progress(i, result);
     }
   }
   return result;

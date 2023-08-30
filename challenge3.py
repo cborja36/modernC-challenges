@@ -8,7 +8,6 @@ def prettyu(n):
 def f(n, verbose=True):
     result = 0.0
 
-    first = True
     for i in range(n + 1):
         current_term = 1.0 / (2 * i + 1)
         if i % 2 == 1:
@@ -16,14 +15,11 @@ def f(n, verbose=True):
         result += current_term
 
         if verbose and i % 10000000 == 0:
-            if not first:
-                # Move cursor up by 3 lines (like the ANSI code \033[3A in C)
-                print("\033[3A", end="")
             print("\r>> Iteration ({}) <<".format(prettyu(i)))
             print("Real value:   {:.16f}".format(math.pi))
             print("Estimation:   {:.16f}".format(4 * result))
-            print("Error:        {:.12e}".format(abs(4 * result - math.pi)), end="")
-            first = False
+            print("Error:        {:.12e}".format(abs(4 * result - math.pi)))
+            print("\033[5A")
 
     return result
 
@@ -34,4 +30,4 @@ def calculate_precision(n_decimals):
 
 
 if __name__ == "__main__":
-    f(int(calculate_precision(64)))
+    f(int(calculate_precision(11)))
